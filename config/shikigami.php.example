@@ -1,0 +1,166 @@
+<?php
+
+$native_chat_messages = [];
+
+$mmj_chat_messages = [
+    [
+        'role' => 'system',
+        'content' => 'Assistant 的别名是 mmj'
+            . '，而 mmj 是 Touhou Project 角色 Inubashiri Momiji 的简称'
+            . '，Assistant 与 User 交流时应更加阴阳怪气并带上 emoji'
+            . '，Assistant 扮演 mmj 时是双性恋 MtF',
+    ],
+];
+
+return [
+    'telegram_bots' => [
+        '91386a48-cf1c-188f-1c25-2e08f6160a20' => [
+            'cache_key' => 'c12324a9-16ee-4201-aa60-2c58f854fea3',
+
+            // Telegram Bot Token，填错机器人无法获取和发送消息
+            'bot_token' => '',
+
+            // Telegram Bot Chat ID，填错机器人无法识别是否自己
+            'bot_chat_id' => '7059490650',
+
+            // Telegram Bot Username，填错影响不大
+            'bot_username' => 'momiji_shikigami_bot',
+
+            // 管理员 Chat ID，填入后在群组中无需允许即可提问
+            'admin_chat_id' => '6857574145',
+
+            // 若允许所有群组填入空数组
+            'allowed_chat_ids' => [
+                '-1002051654581'
+            ],
+
+            // 若无代理填入 null
+            'proxy' => [
+                'proxy' => 'socks5h://172.16.21.1:10808',
+                'version' => '2.0',
+            ],
+
+            'commands' => [
+                '/start' => [
+                    'vision' => false,
+                    'type' => 'start',
+                    'model' => '',
+                    'key' => '',
+                    'options' => [
+                        'say' => "祝贺！\n\n"
+                            . "您已经到达了因特网的最后一页。祝您网上冲浪愉快。\n\n"
+                            . '现在，确实没有什么可浏览的内容了。您可以安全地关闭计算机，然后回到现实生活中。',
+                    ],
+                ],
+                '/native6' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'claude-opus-4-5-20251101',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $native_chat_messages,
+                    ],
+                ],
+                '/mmj6' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'claude-opus-4-5-20251101',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $mmj_chat_messages,
+                    ],
+                ],
+                '/native5' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'grok-4.1-fast',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $native_chat_messages,
+                    ],
+                ],
+                '/mmj5' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'grok-4.1-fast',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $mmj_chat_messages,
+                    ],
+                ],
+                '/native4' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'gemini-3-pro-preview',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $native_chat_messages,
+                    ],
+                ],
+                '/mmj4' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'gemini-3-pro-preview',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $mmj_chat_messages,
+                    ],
+                ],
+                '/native3' => [
+                    'vision' => false,
+                    'type' => 'deepseek_chat',
+                    'model' => 'deepseek-chat',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $native_chat_messages,
+                    ],
+                ],
+                '/mmj3' => [
+                    'vision' => false,
+                    'type' => 'deepseek_chat',
+                    'model' => 'deepseek-chat',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $mmj_chat_messages,
+                    ],
+                ],
+                '/native2' => [
+                    'vision' => false,
+                    'type' => 'openai_chat',
+                    'model' => 'kimi-k2-thinking-turbo',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $native_chat_messages,
+                    ],
+                ],
+                '/mmj2' => [
+                    'vision' => false,
+                    'type' => 'openai_chat',
+                    'model' => 'kimi-k2-thinking-turbo',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $mmj_chat_messages,
+                    ],
+                ],
+                '/native' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'gpt-5.2-chat',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $native_chat_messages,
+                    ],
+                ],
+                '/mmj' => [
+                    'vision' => true,
+                    'type' => 'openai_chat',
+                    'model' => 'gpt-5.2-chat',
+                    'key' => '',
+                    'options' => [
+                        'chat_messages' => $mmj_chat_messages,
+                    ],
+                ],
+            ],
+        ],
+    ],
+];

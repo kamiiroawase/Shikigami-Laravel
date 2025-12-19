@@ -1,0 +1,57 @@
+services:
+#    nginx:
+#        image: nginx:1.28.0-bookworm-perl
+#        ports:
+#            - '80:80'
+#        volumes:
+#            - .:/var/www/html
+#            - ./storage/sockets:/sockets
+#            - ./docker/nginx/conf.d:/etc/nginx/conf.d
+#            - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:rw
+#        restart: unless-stopped
+#        networks:
+#            - shikigami
+
+    swoole:
+        user: 1000:1000
+        image: shikigami-swoole:latest
+        build:
+            context: ./docker/swoole
+        ports:
+            - '80:80'
+        command: php -d variables_order=EGPCS artisan octane:start --host=0.0.0.0 --port=80 --workers=12 --task-workers=1 --max-requests=6553500
+        volumes:
+            - .:/app
+            - ./storage/sockets:/sockets
+            - ./docker/swoole/php.ini:/usr/local/etc/php/php.ini
+        restart: unless-stopped
+        networks:
+            - shikigami
+
+    telegram-bot:
+        user: 1000:1000
+        image: shikigami-swoole:latest
+        build:
+            context: ./docker/swoole
+        command: php artisan telegram-bot
+        volumes:
+            - .:/app
+            - ./storage/sockets:/sockets
+            - ./docker/swoole/php.ini:/usr/local/etc/php/php.ini
+        restart: unless-stopped
+        networks:
+            - shikigami
+
+#    redis-0:
+#        image: redis:8.0.2-bookworm
+#        volumes:
+#            - ./storage/sockets:/sockets
+#            - ./storage/redis/data:/data
+#        command: redis-server --unixsocket /sockets/redis-0.sock --unixsocketperm 777
+#        restart: unless-stopped
+#        networks:
+#            - shikigami
+
+networks:
+    shikigami:
+        driver: bridge
