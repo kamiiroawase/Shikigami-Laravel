@@ -48,6 +48,8 @@ class OpenaiRequestJob extends QueueJob
                 }
 
                 $api = new OpenaiApi([
+                    'api_url' => $this->data['openai_api_url'],
+                    'proxy' => $this->data['openai_proxy'],
                     'model' => $this->data['openai_model'],
                     'key' => $this->data['openai_key'],
                 ], $this->data['openai_type'] === 'deepseek_chat');

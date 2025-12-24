@@ -29,6 +29,8 @@ readonly class TelegramBotTaskGen
                 'openai_key' => $result['command_data']['key'],
                 'openai_type' => $result['command_data']['type'],
                 'openai_model' => $result['command_data']['model'],
+                'openai_proxy' => $result['command_data']['proxy'],
+                'openai_api_url' => $result['command_data']['api_url'],
                 'chat_messages' => $result['command_data']['options']['chat_messages'],
 
                 'chat_id' => $result['request_data']['message']['chat']['id'],

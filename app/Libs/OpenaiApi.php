@@ -52,17 +52,25 @@ class OpenaiApi
 
     private function getClient(): PendingRequest
     {
-        $client = $this->isDeepSeek
-            ? Http::baseUrl('https://api.deepseek.com/')
-            : Http::baseUrl('https://www.dmxapi.cn/');
+        $client = Http::baseUrl($this->data['api_url']);
 
-        return $client->connectTimeout(6)
-            ->timeout($this->isDeepSeek ? 150 : 60)
-            ->retry(6, 100, function (Exception $e) {
-                return $e instanceof ConnectionException;
-            })
-            ->withHeaders([
-                'Authorization' => "Bearer {$this->data['key']}",
+        $client->connectTimeout(6)->timeout($this->isDeepSeek ? 150 : 60);
+
+        $client->retry(6, 100, function (Exception $e) {
+            return $e instanceof ConnectionException;
+        });
+
+        $client->withHeaders([
+            'Authorization' => "Bearer {$this->data['key']}",
+        ]);
+
+        if (!is_null($this->data['proxy'])) {
+            $client->withOptions([
+                'proxy' => $this->data['proxy']['proxy'],
+                'version' => $this->data['proxy']['version'],
             ]);
+        }
+
+        return $client;
     }
 }
