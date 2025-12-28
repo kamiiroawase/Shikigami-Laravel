@@ -9,8 +9,8 @@ use Illuminate\Log\LogManager;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Laravel\SerializableClosure\SerializableClosure;
-use Laravel\Telescope\Contracts\EntriesRepository;
-use Laravel\Telescope\Telescope;
+//use Laravel\Telescope\Contracts\EntriesRepository;
+//use Laravel\Telescope\Telescope;
 use Throwable;
 
 class OctaneHelper
@@ -85,11 +85,11 @@ class OctaneHelper
 
         $disk = self::getShutdownCallbackDisk();
 
-        try {
-            $entriesRepository = app(EntriesRepository::class);
-        } catch (Throwable) {
-            $entriesRepository = null;
-        }
+//        try {
+//            $entriesRepository = app(EntriesRepository::class);
+//        } catch (Throwable) {
+//            $entriesRepository = null;
+//        }
 
         $getProcessCallback = function (InvokedProcess $process) use (&$processes) {
             $processes[] = $process;
@@ -108,9 +108,9 @@ class OctaneHelper
                 report($e);
             }
 
-            if (!is_null($entriesRepository)) {
-                Telescope::store($entriesRepository);
-            }
+//            if (!is_null($entriesRepository)) {
+//                Telescope::store($entriesRepository);
+//            }
 
             if ($resetLog) {
                 $logChannels = array_keys($logManager->getChannels());
@@ -130,7 +130,7 @@ class OctaneHelper
     public static function taskStart(callable $task): InvokedProcess
     {
         return Process::forever()->path(base_path())
-            ->env(['LARAVEL_INVOKABLE_CLOSURE' => serialize(new SerializableClosure($task))])
+            ->env(['LARAVEL_INVOKABLE_CLOSURE' => base64_encode(serialize(new SerializableClosure($task)))])
             ->start(Application::formatCommandString('invoke-serialized-closure'));
     }
 

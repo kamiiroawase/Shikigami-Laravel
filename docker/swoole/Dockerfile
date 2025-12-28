@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp:1.9.0-php8.4.10-bookworm
+FROM dunglas/frankenphp:1.11.1-php8.4.16-bookworm
 
 RUN apt update \
     && apt install -y net-tools procps npm \

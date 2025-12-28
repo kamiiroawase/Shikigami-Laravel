@@ -12,21 +12,21 @@ services:
 #        networks:
 #            - shikigami
 
-    swoole:
-        user: 1000:1000
-        image: shikigami-swoole:latest
-        build:
-            context: ./docker/swoole
-        ports:
-            - '80:80'
-        command: php -d variables_order=EGPCS artisan octane:start --host=0.0.0.0 --port=80 --workers=12 --task-workers=1 --max-requests=6553500
-        volumes:
-            - .:/app
-            - ./storage/sockets:/sockets
-            - ./docker/swoole/php.ini:/usr/local/etc/php/php.ini
-        restart: unless-stopped
-        networks:
-            - shikigami
+#    swoole:
+#        user: 1000:1000
+#        image: shikigami-swoole:latest
+#        build:
+#            context: ./docker/swoole
+#        ports:
+#            - '80:80'
+#        command: php -d variables_order=EGPCS artisan octane:start --host=0.0.0.0 --port=80 --workers=1 --task-workers=1 --max-requests=6553500
+#        volumes:
+#            - .:/app
+#            - ./storage/sockets:/sockets
+#            - ./docker/swoole/php.ini:/usr/local/etc/php/php.ini
+#        restart: unless-stopped
+#        networks:
+#            - shikigami
 
     telegram-bot:
         user: 1000:1000
