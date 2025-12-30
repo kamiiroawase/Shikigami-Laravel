@@ -30,15 +30,13 @@ chmod 777 ./storage ./storage/logs ./storage/sockets ./bootstrap/cache
 
 从这里开始需要 Docker
 
-通过 Composer 安装 PHP 依赖库
-
-（若服务器在国内，注意配置好 Docker 和 Composer 代理或全局代理）
+通过 Composer 安装 PHP 依赖库，若服务器在国内，注意配置好代理
 
 ```bash
 sudo docker run --rm -it --volume $PWD:/app --user $(id -u):$(id -g) composer:2.9.1 --ignore-platform-req=ext-pcntl install --no-dev
 ```
 
-构建镜像，网络好的情况下要大概5分钟
+构建镜像，若服务器在国内，注意配置好代理
 
 ```bash
 sudo docker compose build
