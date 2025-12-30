@@ -38,8 +38,14 @@ chmod 777 ./storage ./storage/logs ./storage/sockets ./bootstrap/cache
 sudo docker run --rm -it --volume $PWD:/app --user $(id -u):$(id -g) composer:2.9.1 --ignore-platform-req=ext-pcntl install --no-dev
 ```
 
-机器人，启动！（首次启动需要构建镜像，网络好的情况下要大概5分钟）
+构建镜像，网络好的情况下要大概5分钟
 
 ```bash
-sudo docker compose down;sudo docker compose up -d
+sudo docker compose build
+```
+
+机器人，启动！
+
+```bash
+sudo docker compose up -d
 ```
