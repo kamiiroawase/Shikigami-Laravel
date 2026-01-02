@@ -52,7 +52,7 @@ class OpenaiRequestJob extends QueueJob
                     'proxy' => $this->data['openai_proxy'],
                     'model' => $this->data['openai_model'],
                     'key' => $this->data['openai_key'],
-                ], $this->data['openai_type'] === 'deepseek_chat');
+                ]);
 
                 $chatResult = $api->chat($result['chat_messages']);
 

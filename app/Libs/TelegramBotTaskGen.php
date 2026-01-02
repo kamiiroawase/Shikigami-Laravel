@@ -6,16 +6,51 @@ use App\Jobs\OpenaiRequestJob;
 use App\Jobs\TelegramBotSendJob;
 use Illuminate\Support\Facades\RateLimiter;
 
-readonly class TelegramBotTaskGen
+class TelegramBotTaskGen
 {
-    public function __construct(private array $configs)
+    private array $result;
+
+    public function __construct(private readonly array $configs)
     {
         //
     }
 
-    public function getJobFn(array $requestData): callable|null
+    private function initResult(): void
     {
-        $result = $this->shouldHandle($requestData);
+        $this->result = [
+            'code' => -1,
+            'configs' => $this->configs,
+            'request_data' => [],
+            'is_bot_self' => false,
+            'is_private_chat' => false,
+
+            'message_text' => null,
+            'message_reply_text' => null,
+
+            'command' => [],
+            'command_data' => [],
+            'command_hit' => false,
+
+            'telegram_text' => '',
+            'file_id' => null,
+        ];
+    }
+
+    public function getTaskFn(array $requestData): callable|null
+    {
+        // 重置结果
+        $this->initResult();
+
+        // 处理结果
+        $this->handleResult($requestData);
+
+        // 生成请求任务
+        return $this->taskFnGen();
+    }
+
+    private function taskFnGen(): callable|null
+    {
+        $result = $this->result;
 
         // 这里开始不能使用 $this->，否则反序列化会失败
         return match ($result['code']) {
@@ -43,6 +78,7 @@ readonly class TelegramBotTaskGen
                 'is_private_chat' => $result['is_private_chat'],
                 'message_reply_text' => $result['message_reply_text'],
             ]),
+
             1 => fn() => new TelegramBotSendJob([
                 'proxy' => $result['configs']['proxy'],
                 'bot_token' => $result['configs']['bot_token'],
@@ -52,50 +88,33 @@ readonly class TelegramBotTaskGen
 
                 'text' => $result['telegram_text'],
             ]),
+
             default => null,
         };
     }
 
-    private function shouldHandle(array $requestData): array
+    private function handleResult(array $requestData): void
     {
-        $result = [
-            'code' => -1,
-            'configs' => $this->configs,
-            'request_data' => [],
-            'is_bot_self' => false,
-            'is_private_chat' => false,
-
-            'message_text' => null,
-            'message_reply_text' => null,
-
-            'command' => [],
-            'command_data' => [],
-            'command_hit' => false,
-
-            'telegram_text' => '',
-            'file_id' => null,
-        ];
-
-        if (!$this->determineRequestData($requestData, $result)) {
-            return $result;
+        if (!$this->determineRequestData($requestData)) {
+            return;
         }
 
-        if (!$this->determineCommandHit($result)) {
-            return $result;
+        if (!$this->determineCommandHit()) {
+            return;
         }
 
         $cacheKey = 'ccd611fd-ba88-4e59-a4e7-bd451188fc94::'
-            . $result['request_data']['message']['from']['id'];
+            . $this->result['request_data']['message']['from']['id'];
 
-        switch ($result['command_data']['type']) {
+        switch ($this->result['command_data']['type']) {
             case 'start':
                 $remaining = RateLimiter::remaining($cacheKey, 1);
 
                 RateLimiter::hit($cacheKey);
 
                 if ($remaining > 0) {
-                    $result['telegram_text'] = $result['command_data']['options']['say'];
-                    $result['code'] = 1;
+                    $this->result['telegram_text'] = $this->result['command_data']['options']['say'];
+                    $this->result['code'] = 1;
                 }
                 break;
             case 'openai_chat':
@@ -105,156 +124,162 @@ readonly class TelegramBotTaskGen
                 RateLimiter::hit($cacheKey);
 
                 if ($remaining === 0) {
-                    $result['telegram_text'] = '您的请求过于频繁，请稍后再试';
-                    $result['code'] = 1;
+                    $this->result['telegram_text'] = '您的请求过于频繁，请稍后再试';
+                    $this->result['code'] = 1;
                 }
 
                 if ($remaining > 0) {
-                    if (!$this->determineRequestFile($result)) {
-                        $result['telegram_text'] = '抱歉！暂无法识别动图或视频！';
-                        $result['code'] = 1;
+                    if (!$this->determineRequestFile()) {
+                        $this->result['telegram_text'] = '抱歉！暂无法识别动图或视频！';
+                        $this->result['code'] = 1;
                     }
                     else {
-                        $result['code'] = 0;
+                        $this->result['code'] = 0;
                     }
                 }
                 break;
         }
-
-        return $result;
     }
 
-    private function determineRequestData(array $requestData, array &$result): bool
+    private function determineRequestData(array $requestData): bool
     {
-        $result['request_data'] = $requestData;
+        $this->result['request_data'] = $requestData;
 
-        $result['is_private_chat'] = $result['request_data']['message']['chat']['type'] === 'private';
+        $this->result['is_private_chat'] = $this->result['request_data']['message']['chat']['type'] === 'private';
 
+        // 群聊不在允许 Chat id 列表内则返回 false （允许私聊）
         if (!empty($this->configs['allowed_chat_ids'])) {
-            if (!in_array($result['request_data']['message']['chat']['id'], $this->configs['allowed_chat_ids'])) {
-                if ($result['request_data']['message']['from']['is_bot'] ?? true) {
+            if (!in_array($this->result['request_data']['message']['chat']['id'], $this->configs['allowed_chat_ids'])) {
+                if ($this->result['request_data']['message']['from']['is_bot'] ?? true) {
                     return false;
                 }
-                if (!$result['is_private_chat']) {
+                if (!$this->result['is_private_chat']) {
                     return false;
                 }
             }
         }
 
-        $result['message_text'] = (
-            $result['request_data']['message']['text']
-            ?? $result['request_data']['message']['caption']
-            ?? null
-        );
+        $this->result['message_text'] =
+            $this->result['request_data']['message']['text']
+            ?? $this->result['request_data']['message']['caption']
+            ?? null;
 
-        if (!is_string($result['message_text'])) {
+        if (!is_string($this->result['message_text'])) {
             return false;
         }
 
-        if (!str_starts_with($result['message_text'], '/')) {
+        if (!str_starts_with($this->result['message_text'], '/')) {
             return false;
         }
 
-        $result['message_reply_text'] = (
-            $result['request_data']['message']['reply_to_message']['text']
-            ?? $result['request_data']['message']['reply_to_message']['caption']
-            ?? null
-        );
+        $this->result['message_reply_text'] =
+            $this->result['request_data']['message']['reply_to_message']['text']
+            ?? $this->result['request_data']['message']['reply_to_message']['caption']
+            ?? null;
 
-        if (!is_null($result['message_reply_text']) and !is_string($result['message_reply_text'])) {
+        if (!is_null($this->result['message_reply_text']) and !is_string($this->result['message_reply_text'])) {
             return false;
         }
 
-        $messageFromId = (string)($result['request_data']['message']['reply_to_message']['from']['id'] ?? null);
+        $messageFromId = (string)($this->result['request_data']['message']['reply_to_message']['from']['id'] ?? null);
 
-        $result['is_bot_self'] = $messageFromId === $this->configs['bot_chat_id'];
+        $this->result['is_bot_self'] = $messageFromId === $this->configs['bot_chat_id'];
 
         return true;
     }
 
-    private function determineCommandHit(array &$result): bool
+    private function determineCommandHit(): bool
     {
         $bot_username = $this->configs['bot_username'];
 
+        $determineCommandHitFn = function (string $command, bool $withSpace) use ($bot_username) {
+            if (str_starts_with($this->result['message_text'], "{$command}@{$bot_username}")) {
+                if ($withSpace) {
+                    if (str_starts_with($this->result['message_text'], "{$command}@{$bot_username} ")) {
+                        if ($this->result['message_text'] !== "{$command}@{$bot_username} ") {
+                            $this->result['command_hit'] = true;
+                        }
+                    }
+                }
+                elseif ($this->result['message_text'] === "{$command}@{$bot_username}") {
+                    $this->result['command_hit'] = true;
+                }
+            }
+
+            elseif ($withSpace) {
+                if (str_starts_with($this->result['message_text'], "{$command} ")) {
+                    if ($this->result['message_text'] !== "{$command} ") {
+                        $this->result['command_hit'] = true;
+                    }
+                }
+            }
+
+            elseif ($this->result['message_text'] === $command) {
+                $this->result['command_hit'] = true;
+            }
+        };
+
+        $commandHitFn = function (string $command, array $value) {
+            if ($this->result['command_hit']) {
+                $this->result['command_data'] = $value;
+                $this->result['command'] = $command;
+            }
+        };
+
         foreach ($this->configs['commands'] as $command => $value) {
-            if (!str_starts_with($result['message_text'], $command)) {
+            if (!str_starts_with($this->result['message_text'], $command)) {
                 continue;
             }
 
             if ($value['type'] === 'start') {
-                if (str_starts_with($result['message_text'], "{$command}@")) {
-                    if (str_starts_with($result['message_text'], "{$command}@{$bot_username}")) {
-                        $result['command_hit'] = true;
-                    }
-                }
-                else {
-                    $result['command_hit'] = true;
-                }
-
-                if ($result['command_hit']) {
-                    $result['command_data'] = $value;
-                    $result['command'] = $command;
-                }
-
-                break;
+                $determineCommandHitFn($command, false);
             }
 
-            if (str_starts_with($result['message_text'], "{$command}@")) {
-                if (str_starts_with($result['message_text'], "{$command}@{$bot_username} ")) {
-                    $result['command_hit'] = true;
-                }
+            else {
+                $determineCommandHitFn($command, true);
             }
 
-            elseif (str_starts_with($result['message_text'], "{$command} ")) {
-                $result['command_hit'] = true;
-            }
-
-            if ($result['command_hit']) {
-                if (in_array($result['message_text'], ["{$command} ", "{$command}@{$bot_username} "])) {
-                    $result['command_hit'] = false;
-                    break;
-                }
-
-                $result['command_data'] = $value;
-                $result['command'] = $command;
-            }
+            $commandHitFn($command, $value);
 
             break;
         }
 
-        return $result['command_hit'];
+        return $this->result['command_hit'];
     }
 
-    private function determineRequestFile(array &$result): bool
+    private function determineRequestFile(): bool
     {
-        $photos = $result['request_data']['message']['photo']
-            ?? $result['request_data']['message']['reply_to_message']['photo']
+        $photos = $this->result['request_data']['message']['photo']
+            ?? $this->result['request_data']['message']['reply_to_message']['photo']
             ?? null;
 
-        if (is_null($photos)) {
-            $sticker = $result['request_data']['message']['sticker']
-                ?? $result['request_data']['message']['reply_to_message']['sticker']
-                ?? null;
-
-            if (!is_null($sticker)) {
-                if ($sticker['is_video'] or $sticker['is_animated']) {
-                    return false;
-                }
-
-                $result['file_id'] = $sticker['file_id'];
-            }
-            else {
-                $video = $result['request_data']['message']['video']
-                    ?? $result['request_data']['message']['reply_to_message']['video']
-                    ?? null;
-
-                if (!is_null($video)) {
-                    return false;
-                }
-            }
+        if (!is_null($photos)) {
+            $this->result['file_id'] = end($photos)['file_id'];
+            return true;
         }
-        else {
-            $result['file_id'] = end($photos)['file_id'];
+
+        $sticker = $this->result['request_data']['message']['sticker']
+            ?? $this->result['request_data']['message']['reply_to_message']['sticker']
+            ?? null;
+
+        if (!is_null($sticker)) {
+            if ($sticker['is_video'] or $sticker['is_animated']) {
+                return false;
+            }
+
+            $this->result['file_id'] = $sticker['file_id'];
+            return true;
+        }
+
+        $video = $this->result['request_data']['message']['video']
+            ?? $this->result['request_data']['message']['reply_to_message']['video']
+            ?? null;
+
+        if (!is_null($video)) {
+            return false;
+
+//            $this->result['file_id'] = $sticker['file_id'];
+//            return true;
         }
 
         return true;

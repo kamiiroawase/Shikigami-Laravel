@@ -10,7 +10,7 @@ use Throwable;
 
 class OpenaiApi
 {
-    public function __construct(protected array $data, protected bool $isDeepSeek = false)
+    public function __construct(protected array $data)
     {
         //
     }
@@ -23,22 +23,23 @@ class OpenaiApi
         ];
 
         try {
-            $response = $this->getClient()->post('/v1/chat/completions', array_merge([
+            $response = $this->getClient()->post('/v1/chat/completions', [
                 'model' => $this->data['model'],
                 'messages' => $messages,
-            ], str_starts_with($this->data['model'], 'gpt-5') ? [] : [
-                'max_tokens' => 4096,
-            ]));
+            ]);
 
             if ($response->ok()) {
                 $result['telegram_text'] = $response->json()['choices'][0]['message']['content'] ?? null;
+
                 if (is_null($result['telegram_text'])) {
-                    $result['telegram_text'] = '傻逼 DeepSeek 返回了：' . $response->body();
+                    $result['telegram_text'] = "傻逼 {$this->data['model']} 返回了：{$response->body()}";
                 }
+
                 else {
                     $result['code'] = 0;
                 }
             }
+
             else {
                 $result['telegram_text'] = '收到 API 信息：' . $response->body();
             }
@@ -54,7 +55,7 @@ class OpenaiApi
     {
         $client = Http::baseUrl($this->data['api_url']);
 
-        $client->connectTimeout(6)->timeout($this->isDeepSeek ? 150 : 60);
+        $client->connectTimeout(6)->timeout(120);
 
         $client->retry(6, 100, function (Exception $e) {
             return $e instanceof ConnectionException;
