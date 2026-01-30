@@ -1,7 +1,7 @@
-FROM dunglas/frankenphp:1.11.1-php8.4.16-bookworm
+FROM php:8.4.17-cli-bookworm
 
 RUN apt update \
-    && apt install -y net-tools procps npm \
+    && apt install -y net-tools procps \
     && docker-php-ext-install pcntl
 
 #RUN pecl install redis \

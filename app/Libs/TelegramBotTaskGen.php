@@ -80,12 +80,10 @@ class TelegramBotTaskGen
             ]),
 
             1 => fn() => new TelegramBotSendJob([
-                'proxy' => $result['configs']['proxy'],
-                'bot_token' => $result['configs']['bot_token'],
-
                 'chat_id' => $result['request_data']['message']['chat']['id'],
                 'message_id' => $result['request_data']['message']['message_id'],
-
+                'bot_token' => $result['configs']['bot_token'],
+                'proxy' => $result['configs']['proxy'],
                 'text' => $result['telegram_text'],
             ]),
 

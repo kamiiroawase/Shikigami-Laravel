@@ -62,7 +62,9 @@ class OpenaiRequestJob extends QueueJob
                     }
                 }
             })(),
+
             1 => $this->reply($result['telegram_text']),
+
             default => null,
         };
     }
