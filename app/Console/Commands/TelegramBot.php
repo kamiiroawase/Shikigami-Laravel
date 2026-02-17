@@ -69,8 +69,8 @@ class TelegramBot extends Command
                         }
                     );
                 }
-            } catch (Throwable $exception) {
-                report($exception);
+            } catch (Throwable) {
+                //
             }
         }
     }
