@@ -19,7 +19,7 @@ class TelegramBotApi
     }
 
     /**
-     * @throws ConnectionException
+     * @throws Throwable
      */
     public function getFile(string $fileId): string|null
     {
