@@ -65,7 +65,7 @@ services:
             - ./storage/sockets:/sockets
             - ./docker/php-cli/php.ini:/usr/local/etc/php/php.ini
         depends_on:
-            - redis-0
+            - queue
         restart: unless-stopped
         networks:
             - shikigami

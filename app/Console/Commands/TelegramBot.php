@@ -20,6 +20,8 @@ class TelegramBot extends Command
 
     private Filesystem $disk;
 
+    private bool $should_shutdown = false;
+
     public function __construct()
     {
         parent::__construct();
@@ -35,12 +37,24 @@ class TelegramBot extends Command
                 'api' => new TelegramBotApi($configs['bot_token'], $configs['proxy']),
             ];
         }
+
+        pcntl_signal(SIGINT, function () {
+            $this->should_shutdown = true;
+        });
+
+        pcntl_signal(SIGTERM, function () {
+            $this->should_shutdown = true;
+        });
     }
 
     public function handle(): void
     {
-        try {
-            while (true) {
+        while (true) {
+            if ($this->should_shutdown) {
+                break;
+            }
+
+            try {
                 foreach ($this->bots as $bot) {
                     /** @var TelegramBotApi $api */
                     $api = $bot['api'];
@@ -55,9 +69,9 @@ class TelegramBot extends Command
                         }
                     );
                 }
+            } catch (Throwable) {
+                //
             }
-        } catch (Throwable $exception) {
-            report($exception);
         }
     }
 
