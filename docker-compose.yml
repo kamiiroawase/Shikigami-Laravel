@@ -1,32 +1,32 @@
 services:
-#    nginx:
-#        image: nginx:1.28.0-bookworm-perl
-#        ports:
-#            - '80:80'
-#        volumes:
-#            - .:/var/www/html
-#            - ./storage/sockets:/sockets
-#            - ./docker/nginx/conf.d:/etc/nginx/conf.d
-#            - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:rw
-#        restart: unless-stopped
-#        networks:
-#            - shikigami
+    #    nginx:
+    #        image: nginx:1.28.0-bookworm-perl
+    #        ports:
+    #            - '80:80'
+    #        volumes:
+    #            - .:/var/www/html
+    #            - ./storage/sockets:/sockets
+    #            - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    #            - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:rw
+    #        restart: unless-stopped
+    #        networks:
+    #            - shikigami
 
-#    swoole:
-#        user: 1000:1000
-#        image: shikigami-swoole:latest
-#        build:
-#            context: ./docker/swoole
-#        ports:
-#            - '80:80'
-#        command: php -d variables_order=EGPCS artisan octane:start --host=0.0.0.0 --port=80 --workers=1 --task-workers=1 --max-requests=6553500
-#        volumes:
-#            - .:/app
-#            - ./storage/sockets:/sockets
-#            - ./docker/swoole/php.ini:/usr/local/etc/php/php.ini
-#        restart: unless-stopped
-#        networks:
-#            - shikigami
+    #    swoole:
+    #        user: 1000:1000
+    #        image: shikigami-swoole:latest
+    #        build:
+    #            context: ./docker/swoole
+    #        ports:
+    #            - '80:80'
+    #        command: php -d variables_order=EGPCS artisan octane:start --host=0.0.0.0 --port=80 --workers=1 --task-workers=1 --max-requests=6553500
+    #        volumes:
+    #            - .:/app
+    #            - ./storage/sockets:/sockets
+    #            - ./docker/swoole/php.ini:/usr/local/etc/php/php.ini
+    #        restart: unless-stopped
+    #        networks:
+    #            - shikigami
 
     redis-0:
         image: redis:8.2.4-bookworm
@@ -42,7 +42,12 @@ services:
         image: shikigami-telegram-bot:latest
         build:
             context: docker/php-cli
-        command: service supervisor start;supervisorctl reread;supervisorctl update;supervisorctl start "laravel-worker:*"
+        command: [
+            "/usr/bin/supervisord",
+            "-n",
+            "-c",
+            "/etc/supervisor/conf.d/supervisor.conf"
+        ]
         volumes:
             - .:/app
             - ./storage/sockets:/sockets
@@ -59,7 +64,7 @@ services:
         image: shikigami-telegram-bot:latest
         build:
             context: docker/php-cli
-        command: php artisan telegram-bot
+        command: php artisan telegram-bot:start
         volumes:
             - .:/app
             - ./storage/sockets:/sockets

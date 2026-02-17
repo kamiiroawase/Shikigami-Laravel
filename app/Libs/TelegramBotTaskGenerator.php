@@ -6,7 +6,7 @@ use App\Jobs\OpenaiRequestJob;
 use App\Jobs\TelegramBotSendJob;
 use Illuminate\Support\Facades\RateLimiter;
 
-class TelegramBotTaskGen
+class TelegramBotTaskGenerator
 {
     private array $result;
 
@@ -36,13 +36,13 @@ class TelegramBotTaskGen
         ];
     }
 
-    public function taskGen(array $requestData): void
+    public function taskGen(array $request_data): void
     {
         // 重置结果
         $this->initResult();
 
         // 处理结果
-        $this->handleResult($requestData);
+        $this->handleResult($request_data);
 
         // 生成请求任务
         $this->doTaskGen();
@@ -91,9 +91,9 @@ class TelegramBotTaskGen
         };
     }
 
-    private function handleResult(array $requestData): void
+    private function handleResult(array $request_data): void
     {
-        if (!$this->determineRequestData($requestData)) {
+        if (!$this->determineRequestData($request_data)) {
             return;
         }
 
@@ -101,14 +101,14 @@ class TelegramBotTaskGen
             return;
         }
 
-        $cacheKey = 'ccd611fd-ba88-4e59-a4e7-bd451188fc94::'
+        $cache_key = 'ccd611fd-ba88-4e59-a4e7-bd451188fc94::'
             . $this->result['request_data']['message']['from']['id'];
 
         switch ($this->result['command_data']['type']) {
             case 'start':
-                $remaining = RateLimiter::remaining($cacheKey, 1);
+                $remaining = RateLimiter::remaining($cache_key, 1);
 
-                RateLimiter::hit($cacheKey);
+                RateLimiter::hit($cache_key);
 
                 if ($remaining > 0) {
                     $this->result['telegram_text'] = $this->result['command_data']['options']['say'];
@@ -117,9 +117,9 @@ class TelegramBotTaskGen
                 break;
             case 'openai_chat':
             case 'deepseek_chat':
-                $remaining = RateLimiter::remaining($cacheKey, 12);
+                $remaining = RateLimiter::remaining($cache_key, 12);
 
-                RateLimiter::hit($cacheKey);
+                RateLimiter::hit($cache_key);
 
                 if ($remaining === 0) {
                     $this->result['telegram_text'] = '您的请求过于频繁，请稍后再试';
@@ -139,9 +139,9 @@ class TelegramBotTaskGen
         }
     }
 
-    private function determineRequestData(array $requestData): bool
+    private function determineRequestData(array $request_data): bool
     {
-        $this->result['request_data'] = $requestData;
+        $this->result['request_data'] = $request_data;
 
         $this->result['is_private_chat'] = $this->result['request_data']['message']['chat']['type'] === 'private';
 
@@ -179,9 +179,9 @@ class TelegramBotTaskGen
             return false;
         }
 
-        $messageFromId = (string)($this->result['request_data']['message']['reply_to_message']['from']['id'] ?? null);
+        $message_from_id = (string)($this->result['request_data']['message']['reply_to_message']['from']['id'] ?? null);
 
-        $this->result['is_bot_self'] = $messageFromId === $this->configs['bot_chat_id'];
+        $this->result['is_bot_self'] = $message_from_id === $this->configs['bot_chat_id'];
 
         return true;
     }
@@ -190,9 +190,9 @@ class TelegramBotTaskGen
     {
         $bot_username = $this->configs['bot_username'];
 
-        $determineCommandHitFn = function (string $command, bool $withSpace) use ($bot_username) {
+        $determine_command_hit_fn = function (string $command, bool $with_space) use ($bot_username) {
             if (str_starts_with($this->result['message_text'], "{$command}@{$bot_username}")) {
-                if ($withSpace) {
+                if ($with_space) {
                     if (str_starts_with($this->result['message_text'], "{$command}@{$bot_username} ")) {
                         if ($this->result['message_text'] !== "{$command}@{$bot_username} ") {
                             $this->result['command_hit'] = true;
@@ -204,7 +204,7 @@ class TelegramBotTaskGen
                 }
             }
 
-            elseif ($withSpace) {
+            elseif ($with_space) {
                 if (str_starts_with($this->result['message_text'], "{$command} ")) {
                     if ($this->result['message_text'] !== "{$command} ") {
                         $this->result['command_hit'] = true;
@@ -217,7 +217,7 @@ class TelegramBotTaskGen
             }
         };
 
-        $commandHitFn = function (string $command, array $value) {
+        $command_hit_fn = function (string $command, array $value) {
             if ($this->result['command_hit']) {
                 $this->result['command_data'] = $value;
                 $this->result['command'] = $command;
@@ -230,14 +230,14 @@ class TelegramBotTaskGen
             }
 
             if ($value['type'] === 'start') {
-                $determineCommandHitFn($command, false);
+                $determine_command_hit_fn($command, false);
             }
 
             else {
-                $determineCommandHitFn($command, true);
+                $determine_command_hit_fn($command, true);
             }
 
-            $commandHitFn($command, $value);
+            $command_hit_fn($command, $value);
 
             break;
         }
