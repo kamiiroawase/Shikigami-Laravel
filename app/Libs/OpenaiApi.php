@@ -2,8 +2,6 @@
 
 namespace App\Libs;
 
-use Exception;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -15,6 +13,9 @@ class OpenaiApi
         //
     }
 
+    /**
+     * @throws Throwable
+     */
     public function chat(array $messages): array
     {
         $result = [
@@ -22,30 +23,25 @@ class OpenaiApi
             'telegram_text' => '',
         ];
 
-        try {
-            $response = $this->getClient()->post('/v1/chat/completions', [
-                'model' => $this->data['model'],
-                'messages' => $messages,
-            ]);
+        $response = $this->getClient()->post('/v1/chat/completions', [
+            'model' => $this->data['model'],
+            'messages' => $messages,
+        ]);
 
-            if ($response->ok()) {
-                $result['telegram_text'] = $response->json()['choices'][0]['message']['content'] ?? null;
+        if ($response->ok()) {
+            $result['telegram_text'] = $response->json()['choices'][0]['message']['content'] ?? null;
 
-                if (is_null($result['telegram_text'])) {
-                    $result['telegram_text'] = "傻逼 {$this->data['model']} 返回了：{$response->body()}";
-                }
-
-                else {
-                    $result['code'] = 0;
-                }
+            if (is_null($result['telegram_text'])) {
+                $result['telegram_text'] = "傻逼 {$this->data['model']} 返回了：{$response->body()}";
             }
 
             else {
-                $result['telegram_text'] = '收到 API 信息：' . $response->body();
+                $result['code'] = 0;
             }
-        } catch (Throwable $exception) {
-            $result['telegram_text'] = '处理出错：' . $exception->getMessage();
-            report($exception);
+        }
+
+        else {
+            $result['telegram_text'] .= '收到 API 信息：' . $response->body();
         }
 
         return $result;
@@ -55,11 +51,7 @@ class OpenaiApi
     {
         $client = Http::baseUrl($this->data['api_url']);
 
-        $client->connectTimeout(6)->timeout(120);
-
-        $client->retry(6, 100, function (Exception $e) {
-            return $e instanceof ConnectionException;
-        });
+        $client->connectTimeout(6)->timeout(60);
 
         $client->withHeaders([
             'Authorization' => "Bearer {$this->data['key']}",

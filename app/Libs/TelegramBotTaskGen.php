@@ -36,7 +36,7 @@ class TelegramBotTaskGen
         ];
     }
 
-    public function getTaskFn(array $requestData): callable|null
+    public function taskGen(array $requestData): void
     {
         // 重置结果
         $this->initResult();
@@ -45,16 +45,16 @@ class TelegramBotTaskGen
         $this->handleResult($requestData);
 
         // 生成请求任务
-        return $this->taskFnGen();
+        $this->doTaskGen();
     }
 
-    private function taskFnGen(): callable|null
+    private function doTaskGen(): void
     {
         $result = $this->result;
 
         // 这里开始不能使用 $this->，否则反序列化会失败
-        return match ($result['code']) {
-            0 => fn() => new OpenaiRequestJob([
+        match ($result['code']) {
+            0 => dispatch(new OpenaiRequestJob([
                 'proxy' => $result['configs']['proxy'],
                 'bot_token' => $result['configs']['bot_token'],
                 'admin_chat_id' => $result['configs']['admin_chat_id'],
@@ -77,15 +77,15 @@ class TelegramBotTaskGen
                 'message_text' => $result['message_text'],
                 'is_private_chat' => $result['is_private_chat'],
                 'message_reply_text' => $result['message_reply_text'],
-            ]),
+            ]))->onQueue('default'),
 
-            1 => fn() => new TelegramBotSendJob([
+            1 => dispatch(new TelegramBotSendJob([
                 'chat_id' => $result['request_data']['message']['chat']['id'],
                 'message_id' => $result['request_data']['message']['message_id'],
                 'bot_token' => $result['configs']['bot_token'],
                 'proxy' => $result['configs']['proxy'],
                 'text' => $result['telegram_text'],
-            ]),
+            ]))->onQueue('high'),
 
             default => null,
         };

@@ -4,25 +4,18 @@ namespace App\Jobs;
 
 use App\Libs\OpenaiApi;
 use App\Libs\TelegramBotApi;
-use Exception;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class OpenaiRequestJob extends QueueJob
 {
-    public int $timeout;
-
-    public function __construct(array $data)
+    public function __construct(protected array $data)
     {
-        $this->data = $data;
-
-        $this->onQueue('openai');
-
-        $this->timeout = $this->data['openai_type'] === 'deepseek_chat' ? 300 : 180;
+        //
     }
 
     /**
-     * @throws ConnectionException
+     * @throws Throwable
      *
      * @noinspection PhpUnused
      */
@@ -69,35 +62,32 @@ class OpenaiRequestJob extends QueueJob
         };
     }
 
-    /**
-     * @throws ConnectionException
-     */
     protected function reply(string $text): void
     {
-        new TelegramBotSendJob([
+        dispatch(new TelegramBotSendJob([
             'chat_id' => $this->data['chat_id'],
             'message_id' => $this->data['message_id'],
             'bot_token' => $this->data['bot_token'],
             'proxy' => $this->data['proxy'],
             'text' => $text,
-        ])->handle();
+        ]))->onQueue('high');
     }
 
     /**
-     * @throws ConnectionException
+     * @throws Throwable
      */
     protected function toAdmin(string $text): void
     {
-        new TelegramBotSendJob([
+        dispatch(new TelegramBotSendJob([
             'chat_id' => $this->data['admin_chat_id'],
             'bot_token' => $this->data['bot_token'],
             'proxy' => $this->data['proxy'],
             'text' => $text,
-        ])->handle();
+        ]))->onQueue('high');
     }
 
     /**
-     * @throws ConnectionException
+     * @throws Throwable
      */
     protected function prepareOpenaiChatMessages(): array
     {
@@ -130,10 +120,6 @@ class OpenaiRequestJob extends QueueJob
             }
 
             $file_request_client = Http::connectTimeout(6)->timeout(30);
-
-            $file_request_client->retry(3, 100, function (Exception $e) {
-                return $e instanceof ConnectionException;
-            });
 
             if (!is_null($this->data['proxy'])) {
                 $file_request_client->withOptions([

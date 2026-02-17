@@ -13,8 +13,6 @@ abstract class QueueJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
 
-    protected array $data = [];
-
     /**
      * @noinspection PhpUnused
      */

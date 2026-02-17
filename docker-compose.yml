@@ -28,29 +28,47 @@ services:
 #        networks:
 #            - shikigami
 
-    telegram-bot:
-        user: 1000:1000
-        image: shikigami-swoole:latest
-        build:
-            context: ./docker/swoole
-        command: php artisan telegram-bot
+    redis-0:
+        image: redis:8.2.4-bookworm
         volumes:
-            - .:/app
             - ./storage/sockets:/sockets
-            - ./docker/swoole/php.ini:/usr/local/etc/php/php.ini
+            - ./storage/redis/data:/data
+        command: redis-server --unixsocket /sockets/redis-0.sock --unixsocketperm 777
         restart: unless-stopped
         networks:
             - shikigami
 
-#    redis-0:
-#        image: redis:8.0.2-bookworm
-#        volumes:
-#            - ./storage/sockets:/sockets
-#            - ./storage/redis/data:/data
-#        command: redis-server --unixsocket /sockets/redis-0.sock --unixsocketperm 777
-#        restart: unless-stopped
-#        networks:
-#            - shikigami
+    queue:
+        image: shikigami-telegram-bot:latest
+        build:
+            context: docker/php-cli
+        command: service supervisor start;supervisorctl reread;supervisorctl update;supervisorctl start "laravel-worker:*"
+        volumes:
+            - .:/app
+            - ./storage/sockets:/sockets
+            - ./docker/queue/php.ini:/usr/local/etc/php/php.ini
+            - ./docker/queue/supervisor.conf:/etc/supervisor/conf.d/supervisor.conf
+        depends_on:
+            - redis-0
+        restart: unless-stopped
+        networks:
+            - shikigami
+
+    telegram-bot:
+        user: 1000:1000
+        image: shikigami-telegram-bot:latest
+        build:
+            context: docker/php-cli
+        command: php artisan telegram-bot
+        volumes:
+            - .:/app
+            - ./storage/sockets:/sockets
+            - ./docker/php-cli/php.ini:/usr/local/etc/php/php.ini
+        depends_on:
+            - redis-0
+        restart: unless-stopped
+        networks:
+            - shikigami
 
 networks:
     shikigami:

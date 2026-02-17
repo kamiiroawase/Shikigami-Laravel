@@ -2,10 +2,10 @@
 
 namespace App\Libs;
 
-use Exception;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class TelegramBotApi
 {
@@ -39,7 +39,7 @@ class TelegramBotApi
     }
 
     /**
-     * @throws ConnectionException
+     * @throws Throwable
      */
     public function send(string $chatId, string $text): void
     {
@@ -50,7 +50,7 @@ class TelegramBotApi
     }
 
     /**
-     * @throws ConnectionException
+     * @throws Throwable
      */
     public function reply(string $chatId, string $messageId, string $text): void
     {
@@ -66,7 +66,7 @@ class TelegramBotApi
     }
 
     /**
-     * @throws ConnectionException
+     * @throws Throwable
      */
     public function onMessage(int $tgUdId, callable $handleUpdateFn): void
     {
@@ -99,11 +99,7 @@ class TelegramBotApi
             ]);
         }
 
-        $client->retry(6, 100, function (Exception $e) {
-            return $e instanceof ConnectionException;
-        });
-
-        $client->connectTimeout(10)->timeout(60);
+        $client->connectTimeout(6)->timeout(30);
 
         return $client;
     }
