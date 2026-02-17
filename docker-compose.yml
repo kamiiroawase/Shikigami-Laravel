@@ -56,6 +56,7 @@ services:
             - ./docker/queue/supervisor.conf:/etc/supervisor/conf.d/supervisor.conf
         depends_on:
             - redis-0
+        stop_grace_period: 150s
         restart: unless-stopped
         networks:
             - shikigami
