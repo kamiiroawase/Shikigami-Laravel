@@ -39,6 +39,7 @@ services:
             - shikigami
 
     queue:
+        user: 1000:1000
         image: shikigami-telegram-bot:latest
         build:
             context: docker/php-cli
